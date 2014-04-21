@@ -1,0 +1,13 @@
+
+#suggestion-area{
+    position: absolute;
+    background-color: #f5f5f5;
+    min-width: 30px;
+    min-height: 20px;
+    font-size: 1em;
+    list-style: none;
+    padding: .5em;
+    border-radius: 1em;
+    border: solid 1px grey;
+    z-index: 10000;
+}
