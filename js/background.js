@@ -7,6 +7,7 @@ trie.loadDictionaryFile('/includes/dictionary.txt');
 var DISABLED = false;
 var MIN_CHARS_WORD = 2;
 var INSERT_SPACE = true;
+var MAX_SUGGESTIONS = 5;
 
 /**
  * Add a listener to listen for messages from foreground.js
@@ -18,9 +19,11 @@ chrome.runtime.onMessage.addListener(
         prefs.insertSpace = INSERT_SPACE;
 
         if (request.messageType == "suggestion") {
-            if (!DISABLED)
-                sendResponse({reply: trie.getSuggestions(request.phrase, MIN_CHARS_WORD),
-                              prefs: prefs});
+            if (!DISABLED) {
+                var sug = trie.getSuggestions(request.phrase, MIN_CHARS_WORD);
+                console.log("SENDING MESSAGES");
+                sendResponse({reply: sug, prefs: prefs});
+            }
         }
         // Set preferences.
         // If message contains no value,  
@@ -102,11 +105,16 @@ function Trie() {
      */
     this.getSuggestions = function (inputPhrase, minLength) {
 
+        console.log("HI");// + suggestedPhrases.length);
+
         if (inputPhrase.length < minLength)
             return;
 
+        // search without case
+        var word = inputPhrase.toLowerCase();
+
         // Query the trie for suggestions
-        var deepestNode = this.rootNode.getDeepestNode(inputPhrase);
+        var deepestNode = this.rootNode.getDeepestNode(word);
 
         // If there are no suggestions then return
         if (!deepestNode)
@@ -115,7 +123,6 @@ function Trie() {
         var suggestedPhrases = deepestNode.getPhrases();
 
         if (suggestedPhrases) {
-
             // Sort the suggestions by frequency
             function compare(a, b) {
                 if (parseFloat(a.frequency) < parseFloat(b.frequency))
@@ -125,7 +132,13 @@ function Trie() {
                 return 0;
             }
 
-            return suggestedPhrases.sort(compare);
+            // return a list of top suggestions
+            var sortedTree = suggestedPhrases.sort(compare);
+            var suggestions = [];
+            for (var i = 0; i < sortedTree.length && i < MAX_SUGGESTIONS; ++i) {
+                suggestions[i] = inputPhrase + sortedTree[i].phrase.substring(inputPhrase.length);
+            }
+            return suggestions;
         }
     }
 }

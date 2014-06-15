@@ -49,7 +49,7 @@ var insertSuggestion = function (suggestions, prefs, e) {
 
     var caretPosition = jQuery(':focus').caret();
     var inputArea = jQuery(':focus');
-    var suggestionToAdd = suggestions[parseInt(String.fromCharCode(e.keyCode - 1)) ].phrase;
+    var suggestionToAdd = suggestions[parseInt(String.fromCharCode(e.keyCode - 1)) ];
     var inputAreaTxt = jQuery(':focus').val();
     var currentPhrase = RSIAssist.parseCurrentPhrase(inputAreaTxt.substr(0, caretPosition));
     var newCaratPosition =  caretPosition - currentPhrase.length + suggestionToAdd.length;
@@ -216,8 +216,8 @@ function processEvent(e) {
 
         var suggestionString = "<ul id=\"suggestion-area\">";
 
-        for (var index = 0; index < 5 && index < suggestions.length; ++index) {
-            suggestionString += "<li>" + (index + 1) + ": &nbsp;" + suggestions[index].phrase + "</li>";
+        for (var i = 0; i < suggestions.length; ++i) {
+            suggestionString += "<li>" + (i + 1) + ": &nbsp;" + suggestions[i] + "</li>";
         }
 
         suggestionString += "</ul>";
