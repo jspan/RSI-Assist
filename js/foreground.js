@@ -8,12 +8,12 @@ jQuery(document).ready(
 
 // Do not modify without attendant changes in background.js
 // This function sends a message to background.js asking it for suggestions
-var getSuggestions = function (phrase, callback, e) {
+var getSuggestionsFromBackground = function (phrase, callback, e) {
 
     chrome.runtime.sendMessage(
         {messageType: "suggestion", phrase: phrase},
         function (response) {
-            callback(response.reply, e);
+            callback(response.reply, response.prefs, e);
         }
     );
 }
@@ -23,7 +23,7 @@ var getSuggestions = function (phrase, callback, e) {
  * Takes an array of sorted suggestion objects and displays them.
  * @param suggestions
  */
-var displaySuggestions = function (suggestions) {
+var displaySuggestions = function (suggestions, prefs) {
 
     // Remove the previous suggestion area
     if (jQuery('#suggestion-area').length) {
@@ -43,7 +43,7 @@ var displaySuggestions = function (suggestions) {
  * @param suggestions
  * @param e
  */
-var insertSuggestion = function (suggestions, e) {
+var insertSuggestion = function (suggestions, prefs, e) {
 
     if (!suggestions) return;
 
@@ -52,7 +52,10 @@ var insertSuggestion = function (suggestions, e) {
     var suggestionToAdd = suggestions[parseInt(String.fromCharCode(e.keyCode - 1)) ].phrase;
     var inputAreaTxt = jQuery(':focus').val();
     var currentPhrase = RSIAssist.parseCurrentPhrase(inputAreaTxt.substr(0, caretPosition));
-
+    var newCaratPosition =  caretPosition - currentPhrase.length + suggestionToAdd.length;
+    
+    if (prefs.insertSpace) 
+        newCaratPosition += 1;
 
     // If we are editing a content editable area
     if (jQuery(':focus').attr('contentEditable')) {
@@ -67,8 +70,8 @@ var insertSuggestion = function (suggestions, e) {
         inputArea.val(inputAreaTxt.substring(0, caretPosition - currentPhrase.length) + suggestionToAdd + " " + inputAreaTxt.substring(caretPosition, inputAreaTxt.length));
     }
 
-    // Move the caret to the new position. The one is for the space that is added
-    jQuery(':focus').caret(caretPosition - currentPhrase.length + suggestionToAdd.length + 1);
+    // Move the caret to the new position. 
+    jQuery(':focus').caret(newCaratPosition);
 }
 
 /**
@@ -94,11 +97,13 @@ function processEvent(e) {
         // If a number was pressed insert the phrase into the input field
         // Number 1 to 4
         if (e.keyCode > 48 && e.keyCode < 54) {
-            getSuggestions(currentPhrase.substring(0, currentPhrase.length - 1), insertSuggestion, e);
+            getSuggestionsFromBackground(currentPhrase.substring(0, currentPhrase.length - 1), 
+                                        insertSuggestion, 
+                                        e);
         }
         // Get suggestions and display them
         else {
-            getSuggestions(currentPhrase, displaySuggestions);
+            getSuggestionsFromBackground(currentPhrase, displaySuggestions);
         }
 
     }

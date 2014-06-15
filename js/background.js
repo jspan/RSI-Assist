@@ -1,30 +1,47 @@
+
 // Initialize a trie object that contains the word dictionary
 var trie = new Trie();
-trie.loadDictionaryFile();
+trie.loadDictionaryFile('/includes/dictionary.txt');
 
-// Boolean controlling the functioning of the extension
-var assistDisabled = false;
+// User preferences, default stored here (for now)
+var DISABLED = false;
+var MIN_CHARS_WORD = 2;
+var INSERT_SPACE = true;
 
 /**
  * Add a listener to listen for messages from foreground.js
  */
 chrome.runtime.onMessage.addListener(
     function (request, sender, sendResponse) {
+        var prefs = new Object;
+        prefs.disabled = DISABLED;
+        prefs.insertSpace = INSERT_SPACE;
+
         if (request.messageType == "suggestion") {
-            if (!assistDisabled)
-                sendResponse({reply: trie.getSuggestions(request.phrase)});
+            if (!DISABLED)
+                sendResponse({reply: trie.getSuggestions(request.phrase, MIN_CHARS_WORD),
+                              prefs: prefs});
         }
-        if (request.messageType == "toggle") {
-
-            // Set the value of assistDisabled
-            if (request.value !== undefined) {
-                assistDisabled = request.value;
-                return;
-            }
-
-            // If request.value is not defined then return the value of assistDisabled. This is to tell the front end what the value of assistDisabled is.
-            // Used in foreground.js as well as popup.js
-            sendResponse({reply: assistDisabled});
+        // Set preferences.
+        // If message contains no value,  
+        // reply to caller (popup.js) with current value.
+        if (request.messageType == "disable") {
+            if (request.value !== undefined) 
+                DISABLED = request.value;
+            else
+                sendResponse({reply: DISABLED});
+        }
+        if (request.messageType == "setInsertSpace") {
+            if (request.value !== undefined)
+                INSERT_SPACE = request.value;
+            else 
+                sendResponse({reply: INSERT_SPACE});
+        }
+        if (request.messageType == "setMinChars") {
+            if (request.value !== undefined)
+                MIN_CHARS_WORD = parseInt(request.value);
+            else
+                sendResponse({reply: MIN_CHARS_WORD.toString()});
         }
     }
 );
@@ -40,7 +57,7 @@ function Trie() {
     /**
      * Loads dictionary.txt using an XMLHttpRequest and sends that result to populateTrieFromDictionary()
      */
-    this.loadDictionaryFile = function () {
+    this.loadDictionaryFile = function (dictionaryFileName) {
 
         var xhr = new XMLHttpRequest();
         xhr.onload = function () {
@@ -48,7 +65,7 @@ function Trie() {
                 self.populateTrieFromDictionary(this.responseText);
         };
 
-        xhr.open("GET", chrome.extension.getURL('/includes/dictionary.txt'), true);
+        xhr.open("GET", chrome.extension.getURL(dictionaryFileName), true);
         xhr.send();
     };
 
@@ -83,10 +100,9 @@ function Trie() {
     /**
      * Returns a sorted array of suggestions from the given inputPhrase
      */
-    this.getSuggestions = function (inputPhrase) {
+    this.getSuggestions = function (inputPhrase, minLength) {
 
-        // Only return suggestions if we have the first 2+ characters of the phrase
-        if (inputPhrase.length < 2)
+        if (inputPhrase.length < minLength)
             return;
 
         // Query the trie for suggestions
